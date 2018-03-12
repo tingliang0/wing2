@@ -3,33 +3,39 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
+	"regexp"
+	"strings"
 
 	"github.com/antonholmquist/jason"
 )
 
 type Agent struct {
-	Name     string
-	Age      int
-	handlers map[string]func(o *jason.Object) ([]byte, error)
+	Name     string `json:"name"`
+	Age      int    `json:"age"`
 	conn     *connection
+	handlers map[string]reflect.Value
+}
+
+type RespMsg struct {
+	Errcode int         `json:"errcode"`
+	Payload interface{} `json:"payload"`
 }
 
 func (a *Agent) Init(name string, age int) {
 	a.Name = name
 	a.Age = age
 
-	a.handlers = make(map[string]func(o *jason.Object) ([]byte, error))
-	a.handlers["hello"] = a.Hello
-	a.handlers["add_age"] = a.AddAge
-}
-
-func (a *Agent) Hello(o *jason.Object) ([]byte, error) {
-	return json.Marshal(a)
-}
-
-func (a *Agent) AddAge(o *jason.Object) ([]byte, error) {
-	a.Age += 10
-	return json.Marshal(a)
+	a.handlers = make(map[string]reflect.Value)
+	s := reflect.TypeOf(a)
+	fm := reflect.ValueOf(a)
+	for i := 0; i < s.NumMethod(); i++ {
+		m := s.Method(i)
+		if matched, _ := regexp.MatchString("Handle.*", m.Name); matched {
+			name = strings.ToLower(m.Name[6:])
+			a.handlers[name] = fm.MethodByName(m.Name)
+		}
+	}
 }
 
 func (a *Agent) dispatcher(msg []byte) {
@@ -40,14 +46,39 @@ func (a *Agent) dispatcher(msg []byte) {
 	}
 	name, _ := o.GetString("Name")
 	handler := a.handlers[name]
-	if handler == nil {
+	if !handler.IsValid() {
 		fmt.Printf("unknown proto: %s\n", name)
 		return
 	}
-	ret, err := handler(o)
-	if err != nil {
+	inputs := make([]reflect.Value, 1)
+	inputs[0] = reflect.ValueOf(o)
+
+	// call
+	rets := handler.Call(inputs)
+	if len(rets) == 0 {
+		return
+	}
+
+	// error
+	if rets[1].Interface() != nil {
 		fmt.Printf("handle %s proto err %s\n", name, err)
 		return
 	}
-	a.conn.send <- ret
+
+	obj, err := json.Marshal(rets[0].Interface())
+	if err != nil {
+		fmt.Printf("marshal proto err %s\n", err)
+		return
+	}
+	a.conn.send <- obj
+}
+
+// Command
+func (a Agent) HandleHello(o *jason.Object) (RespMsg, error) {
+	return RespMsg{0, a}, nil
+}
+
+func (a Agent) HandleAddAge(o *jason.Object) (RespMsg, error) {
+	a.Age += 10
+	return RespMsg{Errcode: 0, Payload: a}, nil
 }
