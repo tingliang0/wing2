@@ -4,7 +4,6 @@ import (
 	"flag"
 	"go/build"
 	"html/template"
-	"log"
 	"net/http"
 	"path/filepath"
 )
@@ -38,7 +37,8 @@ func main() {
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/ws", wsHandler)
 	http.HandleFunc("/benchmark", benchmarkHandler)
+	Info.Println("listen on", *addr)
 	if err := http.ListenAndServe(*addr, nil); err != nil {
-		log.Fatal("ListenAndServe:", err)
+		Error.Fatal("ListenAndServe:", err)
 	}
 }

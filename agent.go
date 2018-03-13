@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"reflect"
 	"regexp"
 	"strings"
@@ -38,16 +37,20 @@ func (a *Agent) Init(name string, age int) {
 	}
 }
 
-func (a *Agent) dispatcher(msg []byte) {
+func (a *Agent) Dispatcher(msg []byte) {
 	o, err := jason.NewObjectFromBytes(msg)
 	if err != nil {
-		fmt.Printf("json -> object get err %s\n", err)
+		Error.Printf("json -> object err %s\n", err)
 		return
 	}
-	name, _ := o.GetString("Name")
+	name, err := o.GetString("Name")
+	if err != nil {
+		Error.Println("invail proto: no name field")
+		return
+	}
 	handler := a.handlers[name]
 	if !handler.IsValid() {
-		fmt.Printf("unknown proto: %s\n", name)
+		Error.Printf("unknown proto: %s\n", name)
 		return
 	}
 	inputs := make([]reflect.Value, 1)
@@ -61,13 +64,13 @@ func (a *Agent) dispatcher(msg []byte) {
 
 	// error
 	if rets[1].Interface() != nil {
-		fmt.Printf("handle %s proto err %s\n", name, err)
+		Error.Printf("handle %s proto err %s\n", name, err)
 		return
 	}
 
 	obj, err := json.Marshal(rets[0].Interface())
 	if err != nil {
-		fmt.Printf("marshal proto err %s\n", err)
+		Error.Printf("object -> json err %s\n", err)
 		return
 	}
 	a.conn.send <- obj

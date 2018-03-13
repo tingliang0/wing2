@@ -1,21 +1,12 @@
 package main
 
-import "fmt"
-
 var online int
 
 type hub struct {
-	// Registered clients
 	connections map[*connection]bool
-
-	// Inbound messages from the clients
-	broadcast chan []byte
-
-	// Register requests from the clients
-	register chan *connection
-
-	// Unregister requests from clients
-	unregister chan *connection
+	broadcast   chan []byte
+	register    chan *connection
+	unregister  chan *connection
 }
 
 var h = hub{
@@ -31,13 +22,13 @@ func (h *hub) run() {
 		case c := <-h.register:
 			h.connections[c] = true
 			online++
-			fmt.Printf("online: %d\n", online)
+			Info.Printf("online: %d\n", online)
 		case c := <-h.unregister:
 			if _, ok := h.connections[c]; ok {
 				delete(h.connections, c)
 				close(c.send)
 				online--
-				fmt.Printf("online: %d\n", online)
+				Info.Printf("online: %d\n", online)
 			}
 		case m := <-h.broadcast:
 			for c := range h.connections {

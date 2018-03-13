@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"math/rand"
 	"net/http"
 
@@ -57,8 +56,7 @@ DONE:
 	for {
 		select {
 		case pkg := <-c.recv:
-			// h.broadcast <- pkg
-			agent.dispatcher(pkg)
+			agent.Dispatcher(pkg)
 		case pkg := <-c.send:
 			c.writer(pkg)
 		case <-c.done: // EOF
@@ -77,7 +75,7 @@ var upgrader = &websocket.Upgrader{
 func wsHandler(w http.ResponseWriter, r *http.Request) {
 	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		fmt.Println(err)
+		Error.Fatal("upgrade websocket fail", err)
 		return
 	}
 	c := &connection{
