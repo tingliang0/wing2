@@ -12,6 +12,7 @@ var (
 	addr      = flag.String("addr", ":8080", "http service address")
 	assets    = flag.String("assets", defaultAssetPath(), "path to assets")
 	homeTempl *template.Template
+	skv       *Skv
 )
 
 func defaultAssetPath() string {
@@ -37,6 +38,12 @@ func main() {
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/ws", wsHandler)
 	http.HandleFunc("/benchmark", benchmarkHandler)
+
+	// init db
+	skv = &Skv{}
+	skv.Init("./store.db")
+	defer skv.Close()
+
 	Info.Println("listen on", *addr)
 	if err := http.ListenAndServe(*addr, nil); err != nil {
 		Error.Fatal("ListenAndServe:", err)
