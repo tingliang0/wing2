@@ -77,11 +77,11 @@ func (a *Agent) Dispatcher(msg []byte) {
 }
 
 // Command
-func (a Agent) HandleHello(o *jason.Object) (RespMsg, error) {
+func (a *Agent) HandleHello(o *jason.Object) (RespMsg, error) {
 	return RespMsg{0, a}, nil
 }
 
-func (a Agent) HandleAddAge(o *jason.Object) (RespMsg, error) {
+func (a *Agent) HandleAddAge(o *jason.Object) (RespMsg, error) {
 	a.Age += 10
 	return RespMsg{Errcode: 0, Payload: a}, nil
 }
